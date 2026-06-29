@@ -8,7 +8,7 @@ public sealed class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private string actionMapName = "Player";
     [SerializeField] private string moveActionName = "Move";
-    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float moveSpeed = 2.5f;
 
     private Rigidbody body;
     private InputAction moveAction;
@@ -16,6 +16,7 @@ public sealed class PlayerMovement : MonoBehaviour
     private void Awake()
     {
         body = GetComponent<Rigidbody>();
+        body.constraints |= RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
 
     private void OnEnable()
@@ -46,12 +47,15 @@ public sealed class PlayerMovement : MonoBehaviour
 
         if (direction.sqrMagnitude < 0.0001f)
         {
+            body.linearVelocity = new Vector3(0f, body.linearVelocity.y, 0f);
+            body.angularVelocity = Vector3.zero;
             return;
         }
 
-        direction = Vector3.ClampMagnitude(direction, 1f);
+        direction.Normalize();
 
-        body.MovePosition(body.position + direction * moveSpeed * Time.fixedDeltaTime);
+        body.linearVelocity = new Vector3(direction.x * moveSpeed, body.linearVelocity.y, direction.z * moveSpeed);
+        body.angularVelocity = Vector3.zero;
         body.MoveRotation(Quaternion.LookRotation(direction, Vector3.up));
     }
 }
