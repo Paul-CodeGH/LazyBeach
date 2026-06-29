@@ -1,12 +1,17 @@
 using UnityEngine;
+using UnityEngine.Animations;
 using UnityEngine.InputSystem;
+using UnityEngine.Playables;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(Collider))]
+[RequireComponent(typeof(Animator))]
 public sealed class PlayerMovement : MonoBehaviour
 {
     [SerializeField] private InputActionAsset inputActions;
     [SerializeField] private Transform cameraTransform;
+    [SerializeField] private AnimationClip idleAnimation;
+    [SerializeField] private AnimationClip walkingAnimation;
     [SerializeField] private string actionMapName = "Player";
     [SerializeField] private string moveActionName = "Move";
     [SerializeField] private string jumpActionName = "Jump";
@@ -18,18 +23,26 @@ public sealed class PlayerMovement : MonoBehaviour
 
     private Rigidbody body;
     private Collider bodyCollider;
+    private Animator animator;
     private PhysicsMaterial frictionlessMaterial;
     private InputAction moveAction;
     private InputAction jumpAction;
     private bool jumpQueued;
+    private bool isPlayingWalking;
+    private PlayableGraph animationGraph;
+    private AnimationMixerPlayable animationMixer;
+    private AnimationClipPlayable idlePlayable;
+    private AnimationClipPlayable walkingPlayable;
     private readonly RaycastHit[] groundHits = new RaycastHit[8];
 
     private void Awake()
     {
         body = GetComponent<Rigidbody>();
         bodyCollider = GetComponent<Collider>();
+        animator = GetComponent<Animator>();
         body.constraints |= RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         ApplyFrictionlessColliderMaterial();
+        CreateAnimationGraph();
     }
 
     private void OnEnable()
@@ -61,6 +74,17 @@ public sealed class PlayerMovement : MonoBehaviour
         {
             Destroy(frictionlessMaterial);
         }
+
+        if (animationGraph.IsValid())
+        {
+            animationGraph.Destroy();
+        }
+    }
+
+    private void Update()
+    {
+        LoopPlayable(idlePlayable, idleAnimation);
+        LoopPlayable(walkingPlayable, walkingAnimation);
     }
 
     private void FixedUpdate()
@@ -84,6 +108,7 @@ public sealed class PlayerMovement : MonoBehaviour
         {
             body.linearVelocity = new Vector3(0f, body.linearVelocity.y, 0f);
             body.angularVelocity = Vector3.zero;
+            SetWalkingAnimation(false);
             return;
         }
 
@@ -91,7 +116,69 @@ public sealed class PlayerMovement : MonoBehaviour
 
         body.linearVelocity = new Vector3(direction.x * moveSpeed, body.linearVelocity.y, direction.z * moveSpeed);
         body.angularVelocity = Vector3.zero;
+        SetWalkingAnimation(true);
         body.MoveRotation(Quaternion.LookRotation(direction, Vector3.up));
+    }
+
+    private void CreateAnimationGraph()
+    {
+        if (idleAnimation == null || walkingAnimation == null)
+        {
+            return;
+        }
+
+        animationGraph = PlayableGraph.Create("Player Movement Animation");
+        animationGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+
+        animationMixer = AnimationMixerPlayable.Create(animationGraph, 2);
+        idlePlayable = AnimationClipPlayable.Create(animationGraph, idleAnimation);
+        walkingPlayable = AnimationClipPlayable.Create(animationGraph, walkingAnimation);
+
+        animationGraph.Connect(idlePlayable, 0, animationMixer, 0);
+        animationGraph.Connect(walkingPlayable, 0, animationMixer, 1);
+
+        AnimationPlayableOutput output = AnimationPlayableOutput.Create(animationGraph, "Animation", animator);
+        output.SetSourcePlayable(animationMixer);
+
+        animationMixer.SetInputWeight(0, 1f);
+        animationMixer.SetInputWeight(1, 0f);
+        animationGraph.Play();
+    }
+
+    private void SetWalkingAnimation(bool walking)
+    {
+        if (!animationMixer.IsValid() || isPlayingWalking == walking)
+        {
+            return;
+        }
+
+        isPlayingWalking = walking;
+        animationMixer.SetInputWeight(0, walking ? 0f : 1f);
+        animationMixer.SetInputWeight(1, walking ? 1f : 0f);
+
+        if (walking)
+        {
+            walkingPlayable.SetTime(0);
+        }
+        else
+        {
+            idlePlayable.SetTime(0);
+        }
+    }
+
+    private static void LoopPlayable(AnimationClipPlayable playable, AnimationClip clip)
+    {
+        if (!playable.IsValid() || clip == null || clip.length <= 0f)
+        {
+            return;
+        }
+
+        double time = playable.GetTime();
+
+        if (time >= clip.length)
+        {
+            playable.SetTime(time % clip.length);
+        }
     }
 
     private void OnJumpPerformed(InputAction.CallbackContext context)
