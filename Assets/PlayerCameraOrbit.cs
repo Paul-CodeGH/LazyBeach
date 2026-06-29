@@ -42,11 +42,22 @@ public sealed class PlayerCameraOrbit : MonoBehaviour
     {
         lookAction = inputActions.FindActionMap(actionMapName, true).FindAction(lookActionName, true);
         lookAction.Enable();
+        LockCursor();
     }
 
     private void OnDisable()
     {
         lookAction?.Disable();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (hasFocus)
+        {
+            LockCursor();
+        }
     }
 
     private void LateUpdate()
@@ -66,5 +77,11 @@ public sealed class PlayerCameraOrbit : MonoBehaviour
     private static float NormalizeAngle(float angle)
     {
         return angle > 180f ? angle - 360f : angle;
+    }
+
+    private static void LockCursor()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 }
