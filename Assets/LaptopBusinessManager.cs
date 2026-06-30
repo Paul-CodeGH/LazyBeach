@@ -911,6 +911,10 @@ public sealed class RealEstateInvestment
 public sealed class StockInvestment
 {
     private const int HistoryLength = 48;
+    private const float BaseMoveScale = 0.001f;
+    private const float TrendChangeChance = 0.24f;
+    private const float ShockChanceBase = 0.035f;
+    private const float MaxSingleTickMove = 0.18f;
 
     [SerializeField] private string companyName;
     [SerializeField] private string symbol;
@@ -921,6 +925,7 @@ public sealed class StockInvestment
     [SerializeField] private bool hasPriceBounds;
     [SerializeField] private float minimumPrice;
     [SerializeField] private float maximumPrice;
+    [SerializeField] private float trend;
 
     private readonly float[] priceHistory = new float[HistoryLength];
     private int historyCount;
@@ -952,26 +957,24 @@ public sealed class StockInvestment
         this.minimumPrice = Mathf.Max(1f, minimumPrice);
         this.maximumPrice = Mathf.Max(this.minimumPrice, maximumPrice);
         this.price = ClampPrice(startingPrice);
+        trend = CreateInitialTrend(phase);
 
-        for (int i = 0; i < priceHistory.Length; i++)
-        {
-            float position = i / Mathf.Max(1f, priceHistory.Length - 1f);
-            float wave = Mathf.Sin(position * Mathf.PI * 4f + phase) * 0.018f;
-            float pulse = Mathf.Sin(position * Mathf.PI * 9f + phase * 1.7f) * 0.007f;
-            float trend = Mathf.Lerp(-0.01f, 0f, position);
-            priceHistory[i] = ClampPrice(startingPrice * (1f + wave + pulse + trend));
-        }
-
-        priceHistory[priceHistory.Length - 1] = price;
+        SeedPriceHistory(startingPrice);
         historyCount = priceHistory.Length;
     }
 
-    public void UpdatePrice(float time)
+    public void UpdatePrice(float _)
     {
-        float wave = Mathf.Sin(time * 0.31f + phase) * volatility * 0.0035f;
-        float pulse = Mathf.Sin(time * 0.93f + phase * 2.1f) * volatility * 0.0018f;
-        float random = UnityEngine.Random.Range(-volatility, volatility) * 0.0012f;
-        price = ClampPrice(price * (1f + wave + pulse + random));
+        float volatilityScale = GetVolatilityScale();
+        trend = MutateTrend(trend, volatilityScale);
+        float movement = CreatePriceMovement(trend, price, volatilityScale, true);
+        price = ClampPrice(price * (1f + movement));
+
+        if (hasPriceBounds && (Mathf.Approximately(price, minimumPrice) || Mathf.Approximately(price, maximumPrice)))
+        {
+            trend *= -0.55f;
+        }
+
         PushHistory(price);
     }
 
@@ -994,6 +997,94 @@ public sealed class StockInvestment
 
         priceHistory[priceHistory.Length - 1] = value;
         historyCount = priceHistory.Length;
+    }
+
+    private void SeedPriceHistory(float startingPrice)
+    {
+        float simulatedPrice = ClampPrice(startingPrice);
+        float simulatedTrend = CreateInitialTrend(phase * 1.7f);
+
+        for (int i = 0; i < priceHistory.Length; i++)
+        {
+            float volatilityScale = GetVolatilityScale();
+            simulatedTrend = MutateTrend(simulatedTrend, volatilityScale);
+            float movement = CreatePriceMovement(simulatedTrend, simulatedPrice, volatilityScale, true);
+            simulatedPrice = ClampPrice(simulatedPrice * (1f + movement));
+            priceHistory[i] = simulatedPrice;
+        }
+
+        priceHistory[priceHistory.Length - 1] = price;
+    }
+
+    private float MutateTrend(float currentTrend, float volatilityScale)
+    {
+        float persistence = UnityEngine.Random.Range(0.62f, 1.05f);
+        float trend = currentTrend * persistence;
+
+        if (UnityEngine.Random.value < TrendChangeChance)
+        {
+            trend += UnityEngine.Random.Range(-volatilityScale * 1.8f, volatilityScale * 1.8f);
+        }
+        else
+        {
+            trend += UnityEngine.Random.Range(-volatilityScale * 0.35f, volatilityScale * 0.35f);
+        }
+
+        return Mathf.Clamp(trend, -volatilityScale * 3f, volatilityScale * 3f);
+    }
+
+    private float CreateInitialTrend(float offset)
+    {
+        float volatilityScale = GetVolatilityScale();
+        float perStockBias = Mathf.Sin(offset * 2.41f) * volatilityScale * 0.35f;
+        return Mathf.Clamp(
+            UnityEngine.Random.Range(-volatilityScale, volatilityScale) + perStockBias,
+            -volatilityScale * 1.4f,
+            volatilityScale * 1.4f);
+    }
+
+    private float CreatePriceMovement(float currentTrend, float currentPrice, float volatilityScale, bool allowShock)
+    {
+        float chop = UnityEngine.Random.Range(-volatilityScale * 1.4f, volatilityScale * 1.4f);
+        float jitter = UnityEngine.Random.Range(-volatilityScale * 0.45f, volatilityScale * 0.45f);
+        float shock = 0f;
+
+        if (allowShock && UnityEngine.Random.value < ShockChanceBase + volatility * 0.0025f)
+        {
+            shock = UnityEngine.Random.Range(-volatilityScale * 6f, volatilityScale * 6f);
+        }
+
+        return Mathf.Clamp(
+            currentTrend + chop + jitter + shock + GetBoundaryPressure(currentPrice, volatilityScale),
+            -MaxSingleTickMove,
+            MaxSingleTickMove);
+    }
+
+    private float GetBoundaryPressure(float currentPrice, float volatilityScale)
+    {
+        if (!hasPriceBounds || maximumPrice <= minimumPrice)
+        {
+            return 0f;
+        }
+
+        float position = Mathf.InverseLerp(minimumPrice, maximumPrice, currentPrice);
+
+        if (position < 0.08f)
+        {
+            return Mathf.Lerp(volatilityScale * 2.5f, 0f, position / 0.08f);
+        }
+
+        if (position > 0.92f)
+        {
+            return Mathf.Lerp(0f, -volatilityScale * 2.5f, (position - 0.92f) / 0.08f);
+        }
+
+        return 0f;
+    }
+
+    private float GetVolatilityScale()
+    {
+        return Mathf.Max(0.001f, volatility * BaseMoveScale);
     }
 
     private float ClampPrice(float value)
