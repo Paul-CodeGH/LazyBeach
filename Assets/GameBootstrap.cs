@@ -6,5 +6,6 @@ public static class GameBootstrap
         CashManager.EnsureExists();
         PlayerNeedsManager.EnsureExists();
         LaptopBusinessManager.EnsureExists();
+        TimeOfDayManager.EnsureExists();
     }
 }
