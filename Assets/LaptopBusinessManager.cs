@@ -6,7 +6,7 @@ public sealed class LaptopBusinessManager : MonoBehaviour
 {
     private const float IncomeInterval = 10f;
     private const float AngelOpportunityRefreshInterval = 300f;
-    private const int VisibleAngelOpportunityCount = 12;
+    private const int VisibleAngelOpportunityCount = 18;
 
     public static LaptopBusinessManager Instance { get; private set; }
 
@@ -535,7 +535,12 @@ public sealed class LaptopBusinessManager : MonoBehaviour
             new RealEstateInvestment("Studio Condo", "Low-cost apartment with steady rent.", 450, 6, 280, 5),
             new RealEstateInvestment("Family House", "A larger home with reliable tenants.", 1400, 22, 800, 5),
             new RealEstateInvestment("Beach Villa", "Premium vacation rental income.", 4200, 80, 2300, 4),
-            new RealEstateInvestment("Lazy Resort", "High-end resort with major payouts.", 12000, 260, 6500, 3)
+            new RealEstateInvestment("Lazy Resort", "High-end resort with major payouts.", 12000, 260, 6500, 3),
+            new RealEstateInvestment("Boardwalk Hotel", "Busy hotel rooms above the main nightlife strip.", 36000, 900, 19000, 3),
+            new RealEstateInvestment("Marina Complex", "Boat slips, storage, and waterfront retail leases.", 110000, 3200, 60000, 3),
+            new RealEstateInvestment("Private Island Lots", "Exclusive island plots with ultra-premium vacation rentals.", 320000, 9800, 175000, 3),
+            new RealEstateInvestment("Luxury Beach District", "A full street of luxury shops, suites, and restaurants.", 900000, 30000, 520000, 3),
+            new RealEstateInvestment("LazyBeach Mega Resort", "Flagship resort campus with the highest rental income.", 2500000, 88000, 1400000, 3)
         };
     }
 
@@ -544,7 +549,9 @@ public sealed class LaptopBusinessManager : MonoBehaviour
         return new[]
         {
             new StockInvestment("SunPeak Energy", "SPE", 18f, 4.2f, 0.2f),
-            new StockInvestment("BlueWave Foods", "BWF", 42f, 3.1f, 1.7f)
+            new StockInvestment("BlueWave Foods", "BWF", 42f, 3.1f, 1.7f),
+            new StockInvestment("StormRide Robotics", "SRR", 650f, 18.5f, 3.4f, 100f, 1500f),
+            new StockInvestment("Apex Quantum Systems", "AQS", 20000f, 22f, 5.8f, 12000f, 28000f)
         };
     }
 
@@ -671,6 +678,66 @@ public sealed class LaptopBusinessManager : MonoBehaviour
                 76000,
                 3.2f,
                 3.7f,
+                150f),
+            new AngelInvestment(
+                "Horizon Resort OS",
+                "Enterprise SaaS",
+                "Operating system for large resort groups to manage rooms, events, staff, and guest upsells.",
+                "Three regional hotel groups are testing the product. The pilots are large, but enterprise sales cycles are slow and support costs are rising.",
+                "Ask: $95,000 buys 1.6% of the company. If one chain signs an annual contract, this can become a serious software exit.",
+                95000,
+                1.6f,
+                2.8f,
+                168f),
+            new AngelInvestment(
+                "BlueCurrent Ferries",
+                "Clean transport",
+                "Electric ferry fleet for island tours and hotel-to-marina transfers.",
+                "The prototype boat is quiet and popular with tourists, but battery degradation is worse than expected and maintenance invoices are climbing.",
+                "Ask: $125,000 buys 2.4% of the company. The market is attractive, but battery failure can still wipe the company out.",
+                125000,
+                2.4f,
+                0f,
+                180f),
+            new AngelInvestment(
+                "TideVault Capital",
+                "Fintech",
+                "Revenue financing platform for beach bars, rental shops, and seasonal tourism businesses.",
+                "The team has underwriting data from 80 merchants and early repayments look strong. A larger lender wants proof across one more season.",
+                "Ask: $180,000 buys 1.2% of the company. If default rates stay low, this can return a large multiple.",
+                180000,
+                1.2f,
+                3.6f,
+                190f),
+            new AngelInvestment(
+                "Sunspire Marina REIT",
+                "Real estate finance",
+                "Fractional marina ownership fund buying damaged slips and upgrading them for premium leases.",
+                "The first marina renovation filled quickly, but property taxes and insurance are higher than planned. Growth should be steady, not explosive.",
+                "Ask: $240,000 buys 1.9% of the fund. It is expensive but has a believable moderate-return path.",
+                240000,
+                1.9f,
+                1.4f,
+                210f),
+            new AngelInvestment(
+                "Neptune Neural Travel",
+                "AI travel",
+                "Personal AI concierge that books flights, beach villas, restaurants, and activities automatically.",
+                "Usage spikes during demos, but paid retention is weak. Large travel agencies are watching, though nobody has signed a paid partnership yet.",
+                "Ask: $320,000 buys 0.9% of the company. The upside is huge, but weak retention can send the stake to zero.",
+                320000,
+                0.9f,
+                0f,
+                220f),
+            new AngelInvestment(
+                "Atlas Island Holdings",
+                "Luxury development",
+                "Acquires small islands and builds ultra-luxury eco resorts for private groups.",
+                "The company has signed an island purchase option and secured soft commitments from high-end travel brokers. Environmental approval is the main risk.",
+                "Ask: $450,000 buys 1.1% of the company. If approvals clear, this can become the largest angel winner.",
+                450000,
+                1.1f,
+                5.2f,
                 150f),
             new AngelInvestment(
                 "BreezeBrew Cans",
@@ -851,6 +918,9 @@ public sealed class StockInvestment
     [SerializeField] private int sharesOwned;
     [SerializeField] private float volatility;
     [SerializeField] private float phase;
+    [SerializeField] private bool hasPriceBounds;
+    [SerializeField] private float minimumPrice;
+    [SerializeField] private float maximumPrice;
 
     private readonly float[] priceHistory = new float[HistoryLength];
     private int historyCount;
@@ -863,12 +933,25 @@ public sealed class StockInvestment
     public int HistoryCount => historyCount;
 
     public StockInvestment(string companyName, string symbol, float startingPrice, float volatility, float phase)
+        : this(companyName, symbol, startingPrice, volatility, phase, 1f, 0f, false)
+    {
+    }
+
+    public StockInvestment(string companyName, string symbol, float startingPrice, float volatility, float phase, float minimumPrice, float maximumPrice)
+        : this(companyName, symbol, startingPrice, volatility, phase, minimumPrice, maximumPrice, true)
+    {
+    }
+
+    private StockInvestment(string companyName, string symbol, float startingPrice, float volatility, float phase, float minimumPrice, float maximumPrice, bool hasPriceBounds)
     {
         this.companyName = companyName;
         this.symbol = symbol;
-        this.price = startingPrice;
         this.volatility = volatility;
         this.phase = phase;
+        this.hasPriceBounds = hasPriceBounds;
+        this.minimumPrice = Mathf.Max(1f, minimumPrice);
+        this.maximumPrice = Mathf.Max(this.minimumPrice, maximumPrice);
+        this.price = ClampPrice(startingPrice);
 
         for (int i = 0; i < priceHistory.Length; i++)
         {
@@ -876,10 +959,10 @@ public sealed class StockInvestment
             float wave = Mathf.Sin(position * Mathf.PI * 4f + phase) * 0.018f;
             float pulse = Mathf.Sin(position * Mathf.PI * 9f + phase * 1.7f) * 0.007f;
             float trend = Mathf.Lerp(-0.01f, 0f, position);
-            priceHistory[i] = Mathf.Max(1f, startingPrice * (1f + wave + pulse + trend));
+            priceHistory[i] = ClampPrice(startingPrice * (1f + wave + pulse + trend));
         }
 
-        priceHistory[priceHistory.Length - 1] = startingPrice;
+        priceHistory[priceHistory.Length - 1] = price;
         historyCount = priceHistory.Length;
     }
 
@@ -888,7 +971,7 @@ public sealed class StockInvestment
         float wave = Mathf.Sin(time * 0.31f + phase) * volatility * 0.0035f;
         float pulse = Mathf.Sin(time * 0.93f + phase * 2.1f) * volatility * 0.0018f;
         float random = UnityEngine.Random.Range(-volatility, volatility) * 0.0012f;
-        price = Mathf.Max(1f, price * (1f + wave + pulse + random));
+        price = ClampPrice(price * (1f + wave + pulse + random));
         PushHistory(price);
     }
 
@@ -911,6 +994,16 @@ public sealed class StockInvestment
 
         priceHistory[priceHistory.Length - 1] = value;
         historyCount = priceHistory.Length;
+    }
+
+    private float ClampPrice(float value)
+    {
+        if (!hasPriceBounds)
+        {
+            return Mathf.Max(1f, value);
+        }
+
+        return Mathf.Clamp(value, minimumPrice, maximumPrice);
     }
 }
 
