@@ -265,13 +265,17 @@ public sealed class LaptopSceneController : MonoBehaviour
         graphRoot.sizeDelta = new Vector2(-380f, 82f);
 
         Image graphBackground = graphRoot.gameObject.AddComponent<Image>();
-        graphBackground.color = new Color(0.01f, 0.025f, 0.035f, 1f);
+        graphBackground.color = new Color(0.025f, 0.09f, 0.12f, 1f);
+
+        Outline graphOutline = graphRoot.gameObject.AddComponent<Outline>();
+        graphOutline.effectColor = new Color(0.22f, 0.9f, 1f, 0.7f);
+        graphOutline.effectDistance = new Vector2(2f, -2f);
 
         GameObject lineObject = new GameObject("Line", typeof(RectTransform));
         lineObject.transform.SetParent(graphRoot, false);
 
         StockGraphGraphic graph = lineObject.AddComponent<StockGraphGraphic>();
-        graph.color = new Color(0.45f, 1f, 0.72f, 1f);
+        graph.color = new Color(0.18f, 1f, 0.54f, 1f);
         graph.raycastTarget = false;
         RectTransform graphRect = graph.GetComponent<RectTransform>();
         graphRect.anchorMin = new Vector2(0f, 0f);

@@ -214,11 +214,11 @@ public sealed class LaptopBusinessManager : MonoBehaviour
     {
         return new[]
         {
-            new RealEstateInvestment("Beach Shack", "A tiny rental near the boardwalk.", 120, 8, 90, 4),
-            new RealEstateInvestment("Studio Condo", "Low-cost apartment with steady rent.", 450, 28, 280, 5),
-            new RealEstateInvestment("Family House", "A larger home with reliable tenants.", 1400, 95, 800, 5),
-            new RealEstateInvestment("Beach Villa", "Premium vacation rental income.", 4200, 330, 2300, 4),
-            new RealEstateInvestment("Lazy Resort", "High-end resort with major payouts.", 12000, 1150, 6500, 3)
+            new RealEstateInvestment("Beach Shack", "A tiny rental near the boardwalk.", 120, 2, 90, 4),
+            new RealEstateInvestment("Studio Condo", "Low-cost apartment with steady rent.", 450, 6, 280, 5),
+            new RealEstateInvestment("Family House", "A larger home with reliable tenants.", 1400, 22, 800, 5),
+            new RealEstateInvestment("Beach Villa", "Premium vacation rental income.", 4200, 80, 2300, 4),
+            new RealEstateInvestment("Lazy Resort", "High-end resort with major payouts.", 12000, 260, 6500, 3)
         };
     }
 
@@ -308,9 +308,14 @@ public sealed class StockInvestment
 
         for (int i = 0; i < priceHistory.Length; i++)
         {
-            priceHistory[i] = startingPrice;
+            float position = i / Mathf.Max(1f, priceHistory.Length - 1f);
+            float wave = Mathf.Sin(position * Mathf.PI * 4f + phase) * 0.018f;
+            float pulse = Mathf.Sin(position * Mathf.PI * 9f + phase * 1.7f) * 0.007f;
+            float trend = Mathf.Lerp(-0.01f, 0f, position);
+            priceHistory[i] = Mathf.Max(1f, startingPrice * (1f + wave + pulse + trend));
         }
 
+        priceHistory[priceHistory.Length - 1] = startingPrice;
         historyCount = priceHistory.Length;
     }
 
