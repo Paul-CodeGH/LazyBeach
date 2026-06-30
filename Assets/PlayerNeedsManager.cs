@@ -16,7 +16,8 @@ public sealed class PlayerNeedsManager : MonoBehaviour
     [SerializeField] private float drunkDecayPerSecond = 0.35f;
 
     private Canvas needsCanvas;
-    private Text needsText;
+    private Text[] needValues;
+    private Image[] needBarFills;
     private float hunger;
     private float thirst;
     private float drunk;
@@ -172,57 +173,141 @@ public sealed class PlayerNeedsManager : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.matchWidthOrHeight = 0.5f;
 
-        GameObject label = new GameObject("Needs Label", typeof(RectTransform));
-        label.transform.SetParent(needsCanvas.transform, false);
+        GameObject panel = new GameObject("Needs Panel", typeof(RectTransform));
+        panel.transform.SetParent(needsCanvas.transform, false);
 
-        Image background = label.AddComponent<Image>();
-        background.color = new Color(0.06f, 0.09f, 0.11f, 0.62f);
+        Image background = panel.AddComponent<Image>();
+        background.color = new Color(0.035f, 0.05f, 0.06f, 0.78f);
         background.raycastTarget = false;
 
-        RectTransform labelRect = label.GetComponent<RectTransform>();
-        labelRect.anchorMin = new Vector2(1f, 0f);
-        labelRect.anchorMax = new Vector2(1f, 0f);
-        labelRect.pivot = new Vector2(1f, 0f);
-        labelRect.anchoredPosition = new Vector2(-24f, 24f);
-        labelRect.sizeDelta = new Vector2(340f, 126f);
+        RectTransform panelRect = panel.GetComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(1f, 0f);
+        panelRect.anchorMax = new Vector2(1f, 0f);
+        panelRect.pivot = new Vector2(1f, 0f);
+        panelRect.anchoredPosition = new Vector2(-24f, 24f);
+        panelRect.sizeDelta = new Vector2(430f, 150f);
 
-        GameObject textObject = new GameObject("Text", typeof(RectTransform));
-        textObject.transform.SetParent(label.transform, false);
+        needValues = new Text[3];
+        needBarFills = new Image[3];
 
-        needsText = textObject.AddComponent<Text>();
-        needsText.font = UiFontUtility.DefaultFont;
-        needsText.fontSize = 23;
-        needsText.fontStyle = FontStyle.Bold;
-        needsText.alignment = TextAnchor.MiddleLeft;
-        needsText.color = new Color(0.94f, 0.98f, 1f, 1f);
-        needsText.lineSpacing = 1.08f;
-        needsText.raycastTarget = false;
-
-        RectTransform textRect = needsText.GetComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = new Vector2(18f, 8f);
-        textRect.offsetMax = new Vector2(-18f, -8f);
+        CreateNeedRow(panel.transform, 0, "Hungry", new Color(1f, 0.62f, 0.25f, 1f));
+        CreateNeedRow(panel.transform, 1, "Thirsty", new Color(0.32f, 0.82f, 1f, 1f));
+        CreateNeedRow(panel.transform, 2, "Drunk", new Color(0.82f, 0.48f, 1f, 1f));
 
         RefreshHud();
     }
 
+    private void CreateNeedRow(Transform parent, int index, string label, Color color)
+    {
+        const float rowHeight = 38f;
+        const float rowSpacing = 8f;
+        const float topPadding = 16f;
+        float y = -topPadding - index * (rowHeight + rowSpacing);
+
+        RectTransform row = CreateRect($"{label} Row", parent);
+        row.anchorMin = new Vector2(0f, 1f);
+        row.anchorMax = new Vector2(1f, 1f);
+        row.pivot = new Vector2(0.5f, 1f);
+        row.anchoredPosition = new Vector2(0f, y);
+        row.sizeDelta = new Vector2(-28f, rowHeight);
+
+        Text labelText = CreateHudText(label, row, 21, FontStyle.Bold, TextAnchor.MiddleLeft, color);
+        SetStretch(labelText.rectTransform, new Vector2(0f, 0f), new Vector2(-312f, 0f));
+
+        RectTransform track = CreateRect($"{label} Bar", row);
+        track.anchorMin = new Vector2(0f, 0.5f);
+        track.anchorMax = new Vector2(1f, 0.5f);
+        track.pivot = new Vector2(0.5f, 0.5f);
+        track.offsetMin = new Vector2(104f, -9f);
+        track.offsetMax = new Vector2(-62f, 9f);
+
+        Image trackImage = track.gameObject.AddComponent<Image>();
+        trackImage.color = new Color(1f, 1f, 1f, 0.12f);
+        trackImage.raycastTarget = false;
+
+        RectTransform fill = CreateRect($"{label} Fill", track);
+        fill.anchorMin = Vector2.zero;
+        fill.anchorMax = new Vector2(0f, 1f);
+        fill.offsetMin = Vector2.zero;
+        fill.offsetMax = Vector2.zero;
+
+        Image fillImage = fill.gameObject.AddComponent<Image>();
+        fillImage.color = color;
+        fillImage.raycastTarget = false;
+        needBarFills[index] = fillImage;
+
+        Text valueText = CreateHudText("0", row, 19, FontStyle.Bold, TextAnchor.MiddleRight, new Color(0.94f, 0.98f, 1f, 1f));
+        SetStretch(valueText.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f));
+        valueText.rectTransform.anchorMin = new Vector2(1f, 0f);
+        valueText.rectTransform.anchorMax = new Vector2(1f, 1f);
+        valueText.rectTransform.pivot = new Vector2(1f, 0.5f);
+        valueText.rectTransform.anchoredPosition = Vector2.zero;
+        valueText.rectTransform.sizeDelta = new Vector2(50f, 0f);
+        needValues[index] = valueText;
+    }
+
     private void RefreshHud()
     {
-        if (needsText == null)
+        if (needBarFills == null || needValues == null)
         {
             return;
         }
 
-        needsText.text =
-            $"Hungry:  {CreateBar(hunger)} {Mathf.RoundToInt(hunger)}\n"
-            + $"Thursty: {CreateBar(thirst)} {Mathf.RoundToInt(thirst)}\n"
-            + $"Drunk:   {CreateBar(drunk)} {Mathf.RoundToInt(drunk)}";
+        SetNeedValue(0, hunger);
+        SetNeedValue(1, thirst);
+        SetNeedValue(2, drunk);
     }
 
-    private static string CreateBar(float value)
+    private void SetNeedValue(int index, float value)
     {
-        int filled = Mathf.RoundToInt(Mathf.Clamp01(value / 100f) * 10f);
-        return $"[{new string('#', filled)}{new string('.', 10 - filled)}]";
+        if (index < 0 || index >= needBarFills.Length || index >= needValues.Length)
+        {
+            return;
+        }
+
+        float normalizedValue = Mathf.Clamp01(value / 100f);
+
+        if (needBarFills[index] != null)
+        {
+            RectTransform fillRect = needBarFills[index].rectTransform;
+            fillRect.anchorMax = new Vector2(normalizedValue, 1f);
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            needBarFills[index].enabled = normalizedValue > 0.001f;
+        }
+
+        if (needValues[index] != null)
+        {
+            needValues[index].text = Mathf.RoundToInt(value).ToString();
+        }
+    }
+
+    private static Text CreateHudText(string value, Transform parent, int fontSize, FontStyle fontStyle, TextAnchor alignment, Color color)
+    {
+        RectTransform textRect = CreateRect("Text", parent);
+        Text text = textRect.gameObject.AddComponent<Text>();
+        text.font = UiFontUtility.DefaultFont;
+        text.fontSize = fontSize;
+        text.fontStyle = fontStyle;
+        text.alignment = alignment;
+        text.color = color;
+        text.text = value;
+        text.raycastTarget = false;
+        return text;
+    }
+
+    private static RectTransform CreateRect(string objectName, Transform parent)
+    {
+        GameObject gameObject = new GameObject(objectName, typeof(RectTransform));
+        gameObject.transform.SetParent(parent, false);
+        return gameObject.GetComponent<RectTransform>();
+    }
+
+    private static void SetStretch(RectTransform rectTransform, Vector2 offsetMin, Vector2 offsetMax)
+    {
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = offsetMin;
+        rectTransform.offsetMax = offsetMax;
     }
 }
