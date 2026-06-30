@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -37,6 +38,8 @@ public sealed class LaptopSceneController : MonoBehaviour
     private Text angelRefreshText;
     private Text[] angelStatusTexts = Array.Empty<Text>();
     private Button[] angelInvestButtons = Array.Empty<Button>();
+    private Text angelPortfolioSummaryText;
+    private readonly List<AngelPortfolioRecordView> angelPortfolioRecordViews = new List<AngelPortfolioRecordView>();
 
     private void Awake()
     {
@@ -206,6 +209,7 @@ public sealed class LaptopSceneController : MonoBehaviour
         angelRefreshText = null;
         angelStatusTexts = Array.Empty<Text>();
         angelInvestButtons = Array.Empty<Button>();
+        ClearAngelPortfolioWidgets();
 
         RectTransform listContent = CreateScrollContent(contentRoot, new Color(0.018f, 0.06f, 0.058f, 1f));
         RealEstateInvestment[] investments = businessManager.RealEstateInvestments;
@@ -234,6 +238,7 @@ public sealed class LaptopSceneController : MonoBehaviour
         angelRefreshText = null;
         angelStatusTexts = Array.Empty<Text>();
         angelInvestButtons = Array.Empty<Button>();
+        ClearAngelPortfolioWidgets();
 
         RectTransform listContent = CreateScrollContent(contentRoot, new Color(0.018f, 0.045f, 0.075f, 1f));
 
@@ -264,6 +269,7 @@ public sealed class LaptopSceneController : MonoBehaviour
         AngelInvestment[] investments = businessManager.AngelInvestments;
         angelStatusTexts = new Text[investments.Length];
         angelInvestButtons = new Button[investments.Length];
+        ClearAngelPortfolioWidgets();
         selectedAngelIndex = Mathf.Clamp(selectedAngelIndex, 0, Mathf.Max(0, investments.Length - 1));
         displayedAngelVersion = businessManager.AngelOpportunityVersion;
 
@@ -302,19 +308,18 @@ public sealed class LaptopSceneController : MonoBehaviour
         angelRefreshText = null;
         angelStatusTexts = Array.Empty<Text>();
         angelInvestButtons = Array.Empty<Button>();
+        ClearAngelPortfolioWidgets();
 
         RectTransform listContent = CreateScrollContent(contentRoot, new Color(0.048f, 0.038f, 0.065f, 1f));
         angelScrollRect = listContent.GetComponentInParent<ScrollRect>();
 
         AddAngelPortfolioSummaryCard(listContent);
         AddAngelPortfolioRecordCards(listContent);
+        RefreshAngelPortfolioWidgets();
 
         SetMessage("Angel investment history shows active positions, exits, sold stakes, and total gain or loss.");
 
-        if (scrollPosition >= 0f)
-        {
-            StartCoroutine(RestoreAngelScrollPosition(scrollPosition));
-        }
+        StartCoroutine(RestoreAngelScrollPosition(scrollPosition >= 0f ? scrollPosition : 1f));
     }
 
     private void AddRealEstateCard(Transform parent, RealEstateInvestment investment, int index)
@@ -431,16 +436,11 @@ public sealed class LaptopSceneController : MonoBehaviour
     {
         RectTransform card = CreateCard(parent, 156f, new Color(0.12f, 0.075f, 0.16f, 0.98f));
 
-        int totalInvested = businessManager.AngelInvestmentTotalInvested;
-        int totalReturned = businessManager.AngelInvestmentTotalReturned;
-        int netProfit = businessManager.AngelInvestmentNetProfit;
-        string netLabel = netProfit >= 0 ? $"Profit: ${netProfit}" : $"Loss: ${Mathf.Abs(netProfit)}";
-
         Text title = CreateText("Angel Investments Portfolio", card, 26, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.98f, 0.88f, 1f, 1f));
         SetStretch(title.rectTransform, new Vector2(20f, 96f), new Vector2(-260f, -12f));
 
-        Text summary = CreateText($"Invested: ${totalInvested}   Returned: ${totalReturned}   {netLabel}   Active: {businessManager.ActiveAngelInvestmentCount}", card, 21, FontStyle.Bold, TextAnchor.MiddleLeft, netProfit >= 0 ? new Color(0.72f, 1f, 0.82f, 1f) : new Color(1f, 0.66f, 0.58f, 1f));
-        SetStretch(summary.rectTransform, new Vector2(20f, 42f), new Vector2(-260f, -66f));
+        angelPortfolioSummaryText = CreateText(string.Empty, card, 21, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.72f, 1f, 0.82f, 1f));
+        SetStretch(angelPortfolioSummaryText.rectTransform, new Vector2(20f, 42f), new Vector2(-260f, -66f));
 
         Button backButton = CreateButton("Opportunities", card, 18, new Color(0.27f, 0.18f, 0.36f, 1f), Color.white);
         RectTransform backRect = backButton.GetComponent<RectTransform>();
@@ -473,7 +473,8 @@ public sealed class LaptopSceneController : MonoBehaviour
     private void AddAngelPortfolioRecordCard(Transform parent, AngelInvestmentRecord record)
     {
         AngelInvestment activeInvestment = FindVisibleAngelInvestmentByRecordId(record.Id);
-        RectTransform card = CreateCard(parent, 144f, record.IsActive ? new Color(0.15f, 0.09f, 0.2f, 0.97f) : new Color(0.095f, 0.065f, 0.12f, 0.96f));
+        RectTransform card = CreateCard(parent, 144f, GetAngelPortfolioRecordBackgroundColor(record));
+        Image background = card.GetComponent<Image>();
 
         Text title = CreateText($"{record.DisplayName}  |  {record.Category}", card, 22, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.98f, 0.88f, 1f, 1f));
         SetStretch(title.rectTransform, new Vector2(20f, 88f), new Vector2(-20f, -12f));
@@ -483,6 +484,8 @@ public sealed class LaptopSceneController : MonoBehaviour
 
         Text detail = CreateText($"Invested: ${record.InvestedAmount} for {record.EquityPercent:0.#}% equity   Returned: ${record.ReturnedAmount}   Net: {FormatSignedCash(record.Profit)}", card, 18, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.92f, 0.9f, 1f, 1f));
         SetStretch(detail.rectTransform, new Vector2(20f, 10f), new Vector2(-20f, -96f));
+
+        angelPortfolioRecordViews.Add(new AngelPortfolioRecordView(record.Id, background, status, detail));
     }
 
     private void AddAngelInvestmentCard(Transform parent, AngelInvestment investment, int index)
@@ -634,7 +637,7 @@ public sealed class LaptopSceneController : MonoBehaviour
         {
             if (showingAngelPortfolio)
             {
-                ShowAngelPortfolio(GetAngelScrollPosition());
+                RefreshAngelPortfolioTab();
             }
             else
             {
@@ -754,6 +757,60 @@ public sealed class LaptopSceneController : MonoBehaviour
         RefreshHeader();
     }
 
+    private void RefreshAngelPortfolioTab()
+    {
+        if (angelPortfolioRecordViews.Count != businessManager.AngelInvestmentRecords.Count)
+        {
+            ShowAngelPortfolio(GetAngelScrollPosition());
+            return;
+        }
+
+        RefreshAngelPortfolioWidgets();
+    }
+
+    private void RefreshAngelPortfolioWidgets()
+    {
+        int netProfit = businessManager.AngelInvestmentNetProfit;
+        string netLabel = netProfit >= 0 ? $"Profit: ${netProfit}" : $"Loss: ${Mathf.Abs(netProfit)}";
+
+        if (angelPortfolioSummaryText != null)
+        {
+            angelPortfolioSummaryText.text = $"Invested: ${businessManager.AngelInvestmentTotalInvested}   Returned: ${businessManager.AngelInvestmentTotalReturned}   {netLabel}   Active: {businessManager.ActiveAngelInvestmentCount}";
+            angelPortfolioSummaryText.color = netProfit >= 0 ? new Color(0.72f, 1f, 0.82f, 1f) : new Color(1f, 0.66f, 0.58f, 1f);
+        }
+
+        for (int i = 0; i < angelPortfolioRecordViews.Count; i++)
+        {
+            AngelPortfolioRecordView recordView = angelPortfolioRecordViews[i];
+            AngelInvestmentRecord record = FindAngelInvestmentRecordById(recordView.RecordId);
+
+            if (record == null)
+            {
+                continue;
+            }
+
+            AngelInvestment activeInvestment = FindVisibleAngelInvestmentByRecordId(record.Id);
+
+            if (recordView.Background != null)
+            {
+                recordView.Background.color = GetAngelPortfolioRecordBackgroundColor(record);
+            }
+
+            if (recordView.StatusText != null)
+            {
+                recordView.StatusText.text = GetAngelPortfolioRecordStatus(record, activeInvestment);
+                recordView.StatusText.color = GetAngelPortfolioRecordColor(record);
+            }
+
+            if (recordView.DetailText != null)
+            {
+                recordView.DetailText.text = $"Invested: ${record.InvestedAmount} for {record.EquityPercent:0.#}% equity   Returned: ${record.ReturnedAmount}   Net: {FormatSignedCash(record.Profit)}";
+            }
+        }
+
+        RefreshHeader();
+    }
+
     private AngelInvestment FindVisibleAngelInvestmentByRecordId(int recordId)
     {
         AngelInvestment[] investments = businessManager.AngelInvestments;
@@ -769,6 +826,21 @@ public sealed class LaptopSceneController : MonoBehaviour
         return null;
     }
 
+    private AngelInvestmentRecord FindAngelInvestmentRecordById(int recordId)
+    {
+        var records = businessManager.AngelInvestmentRecords;
+
+        for (int i = 0; i < records.Count; i++)
+        {
+            if (records[i].Id == recordId)
+            {
+                return records[i];
+            }
+        }
+
+        return null;
+    }
+
     private float GetAngelScrollPosition()
     {
         return angelScrollRect != null ? angelScrollRect.verticalNormalizedPosition : 1f;
@@ -778,11 +850,19 @@ public sealed class LaptopSceneController : MonoBehaviour
     {
         yield return null;
         Canvas.ForceUpdateCanvases();
+        yield return null;
+        Canvas.ForceUpdateCanvases();
 
         if (angelScrollRect != null)
         {
             angelScrollRect.verticalNormalizedPosition = Mathf.Clamp01(scrollPosition);
         }
+    }
+
+    private void ClearAngelPortfolioWidgets()
+    {
+        angelPortfolioSummaryText = null;
+        angelPortfolioRecordViews.Clear();
     }
 
     private void CloseLaptop()
@@ -1053,6 +1133,11 @@ public sealed class LaptopSceneController : MonoBehaviour
             : new Color(1f, 0.66f, 0.58f, 1f);
     }
 
+    private static Color GetAngelPortfolioRecordBackgroundColor(AngelInvestmentRecord record)
+    {
+        return record.IsActive ? new Color(0.15f, 0.09f, 0.2f, 0.97f) : new Color(0.095f, 0.065f, 0.12f, 0.96f);
+    }
+
     private static string FormatSignedCash(int amount)
     {
         return amount >= 0 ? $"+${amount}" : $"-${Mathf.Abs(amount)}";
@@ -1084,5 +1169,21 @@ public sealed class LaptopSceneController : MonoBehaviour
         GameObject eventSystemObject = new GameObject("EventSystem");
         eventSystemObject.AddComponent<EventSystem>();
         eventSystemObject.AddComponent<InputSystemUIInputModule>().AssignDefaultActions();
+    }
+
+    private sealed class AngelPortfolioRecordView
+    {
+        public AngelPortfolioRecordView(int recordId, Image background, Text statusText, Text detailText)
+        {
+            RecordId = recordId;
+            Background = background;
+            StatusText = statusText;
+            DetailText = detailText;
+        }
+
+        public int RecordId { get; }
+        public Image Background { get; }
+        public Text StatusText { get; }
+        public Text DetailText { get; }
     }
 }
