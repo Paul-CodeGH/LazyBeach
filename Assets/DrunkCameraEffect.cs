@@ -5,8 +5,8 @@ using UnityEngine.Rendering.Universal;
 [DefaultExecutionOrder(10000)]
 public sealed class DrunkCameraEffect : MonoBehaviour
 {
-    [SerializeField] private float maxPositionShake = 0.09f;
-    [SerializeField] private float maxRotationShake = 2.8f;
+    [SerializeField] private float maxPositionShake = 0.16f;
+    [SerializeField] private float maxRotationShake = 5f;
     [SerializeField] private float shakeFrequency = 7.5f;
     [SerializeField] private float smoothing = 3.5f;
 
@@ -138,9 +138,9 @@ public sealed class DrunkCameraEffect : MonoBehaviour
 
         volume.weight = Mathf.Clamp01(intensity);
         depthOfField.gaussianEnd.Override(Mathf.Lerp(14f, 2.2f, eased));
-        depthOfField.gaussianMaxRadius.Override(Mathf.Lerp(0.5f, 1.45f, eased));
-        motionBlur.intensity.Override(Mathf.Lerp(0f, 0.55f, eased));
-        lensDistortion.intensity.Override(Mathf.Lerp(0f, -0.18f, eased));
-        lensDistortion.scale.Override(Mathf.Lerp(1f, 1.08f, eased));
+        depthOfField.gaussianMaxRadius.Override(Mathf.Lerp(0.5f, 2.2f, eased));
+        motionBlur.intensity.Override(Mathf.Lerp(0f, 0.75f, eased));
+        lensDistortion.intensity.Override(Mathf.Lerp(0f, -0.28f, eased));
+        lensDistortion.scale.Override(Mathf.Lerp(1f, 1.12f, eased));
     }
 }

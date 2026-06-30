@@ -44,6 +44,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 954cd8c020284994b4667edd5ae11c0f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hungerDecayPerSecond: 0.45
-  thirstDecayPerSecond: 0.55
-  drunkDecayPerSecond: 0.35
+  hungerDecayPerSecond: 0.225
+  thirstDecayPerSecond: 0.275
+  drunkDecayPerSecond: 0.175
+  hungerHealthDrainPerSecond: 2
+  thirstHealthDrainPerSecond: 3
+  healthRecoveryPerSecond: 1.5
+  healthDangerThreshold: 20
+  healthRecoveryThreshold: 35

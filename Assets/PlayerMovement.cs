@@ -19,6 +19,8 @@ public sealed class PlayerMovement : MonoBehaviour
     [SerializeField] private float jumpVelocity = 3f;
     [SerializeField] private float groundCheckDistance = 0.15f;
     [SerializeField] private float groundCheckInset = 0.12f;
+    [SerializeField] private float drunkDriftStart = 0.35f;
+    [SerializeField] private float maxDrunkSidewaysDrift = 0.65f;
     [SerializeField] private LayerMask groundLayers = ~0;
 
     private Rigidbody body;
@@ -114,10 +116,30 @@ public sealed class PlayerMovement : MonoBehaviour
 
         direction.Normalize();
 
-        body.linearVelocity = new Vector3(direction.x * moveSpeed, body.linearVelocity.y, direction.z * moveSpeed);
+        float sidewaysDrift = GetDrunkSidewaysDrift();
+        Vector3 horizontalVelocity = direction * moveSpeed + right * sidewaysDrift;
+        body.linearVelocity = new Vector3(horizontalVelocity.x, body.linearVelocity.y, horizontalVelocity.z);
         body.angularVelocity = Vector3.zero;
         SetWalkingAnimation(true);
         body.MoveRotation(Quaternion.LookRotation(direction, Vector3.up));
+    }
+
+    private float GetDrunkSidewaysDrift()
+    {
+        if (PlayerNeedsManager.Instance == null)
+        {
+            return 0f;
+        }
+
+        float drunkInfluence = Mathf.InverseLerp(drunkDriftStart, 1f, PlayerNeedsManager.Instance.Drunk01);
+
+        if (drunkInfluence <= 0f)
+        {
+            return 0f;
+        }
+
+        float noise = Mathf.PerlinNoise(Time.time * 1.7f, 8.31f) - 0.5f;
+        return noise * 2f * maxDrunkSidewaysDrift * drunkInfluence;
     }
 
     private void CreateAnimationGraph()

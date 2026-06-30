@@ -328,6 +328,8 @@ MonoBehaviour:
   jumpVelocity: 3
   groundCheckDistance: 0.15
   groundCheckInset: 0.12
+  drunkDriftStart: 0.35
+  maxDrunkSidewaysDrift: 0.65
   groundLayers:
     serializedVersion: 2
     m_Bits: 4294967295

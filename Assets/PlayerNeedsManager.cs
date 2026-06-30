@@ -8,12 +8,20 @@ public sealed class PlayerNeedsManager : MonoBehaviour
     private const string PrefabPath = "Prefabs/PlayerNeedsManager";
     private const string MainMenuSceneName = "MainMenu";
     private const string LaptopSceneName = "LaptopScene";
+    private const string EndingScreenSceneName = "EndingScreen";
+    private const int NeedCount = 4;
+    private const float MaxNeedValue = 100f;
 
     public static PlayerNeedsManager Instance { get; private set; }
 
-    [SerializeField] private float hungerDecayPerSecond = 0.45f;
-    [SerializeField] private float thirstDecayPerSecond = 0.55f;
-    [SerializeField] private float drunkDecayPerSecond = 0.35f;
+    [SerializeField] private float hungerDecayPerSecond = 0.225f;
+    [SerializeField] private float thirstDecayPerSecond = 0.275f;
+    [SerializeField] private float drunkDecayPerSecond = 0.175f;
+    [SerializeField] private float hungerHealthDrainPerSecond = 2f;
+    [SerializeField] private float thirstHealthDrainPerSecond = 3f;
+    [SerializeField] private float healthRecoveryPerSecond = 1.5f;
+    [SerializeField] private float healthDangerThreshold = 20f;
+    [SerializeField] private float healthRecoveryThreshold = 35f;
 
     private Canvas needsCanvas;
     private Text[] needValues;
@@ -21,14 +29,18 @@ public sealed class PlayerNeedsManager : MonoBehaviour
     private float hunger;
     private float thirst;
     private float drunk;
+    private float health;
     private float cameraCheckTimer;
+    private bool endingTriggered;
 
     public event Action ValuesChanged;
 
     public float Hunger => hunger;
     public float Thirst => thirst;
     public float Drunk => drunk;
-    public float Drunk01 => Mathf.Clamp01(drunk / 100f);
+    public float Health => health;
+    public float Drunk01 => Mathf.Clamp01(drunk / MaxNeedValue);
+    public float Health01 => Mathf.Clamp01(health / MaxNeedValue);
 
     public static void EnsureExists()
     {
@@ -50,9 +62,20 @@ public sealed class PlayerNeedsManager : MonoBehaviour
 
     public void AddValues(float hungerAmount, float thirstAmount, float drunkAmount)
     {
-        hunger = Mathf.Clamp(hunger + hungerAmount, 0f, 100f);
-        thirst = Mathf.Clamp(thirst + thirstAmount, 0f, 100f);
-        drunk = Mathf.Clamp(drunk + drunkAmount, 0f, 100f);
+        hunger = Mathf.Clamp(hunger + hungerAmount, 0f, MaxNeedValue);
+        thirst = Mathf.Clamp(thirst + thirstAmount, 0f, MaxNeedValue);
+        drunk = Mathf.Clamp(drunk + drunkAmount, 0f, MaxNeedValue);
+        RefreshHud();
+        ValuesChanged?.Invoke();
+    }
+
+    public void ResetForNewGame()
+    {
+        hunger = MaxNeedValue;
+        thirst = MaxNeedValue;
+        drunk = 0f;
+        health = MaxNeedValue;
+        endingTriggered = false;
         RefreshHud();
         ValuesChanged?.Invoke();
     }
@@ -67,6 +90,7 @@ public sealed class PlayerNeedsManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        ResetForNewGame();
         CreateHud();
         SceneManager.sceneLoaded += OnSceneLoaded;
         UpdateSceneVisibility(SceneManager.GetActiveScene());
@@ -85,7 +109,7 @@ public sealed class PlayerNeedsManager : MonoBehaviour
     {
         string activeSceneName = SceneManager.GetActiveScene().name;
 
-        if (activeSceneName == MainMenuSceneName || activeSceneName == LaptopSceneName)
+        if (IsHudHiddenScene(activeSceneName))
         {
             return;
         }
@@ -94,17 +118,26 @@ public sealed class PlayerNeedsManager : MonoBehaviour
         float previousHunger = hunger;
         float previousThirst = thirst;
         float previousDrunk = drunk;
+        float previousHealth = health;
 
         hunger = Mathf.MoveTowards(hunger, 0f, hungerDecayPerSecond * deltaTime);
         thirst = Mathf.MoveTowards(thirst, 0f, thirstDecayPerSecond * deltaTime);
         drunk = Mathf.MoveTowards(drunk, 0f, drunkDecayPerSecond * deltaTime);
+        UpdateHealth(deltaTime);
 
         if (!Mathf.Approximately(previousHunger, hunger)
             || !Mathf.Approximately(previousThirst, thirst)
-            || !Mathf.Approximately(previousDrunk, drunk))
+            || !Mathf.Approximately(previousDrunk, drunk)
+            || !Mathf.Approximately(previousHealth, health))
         {
             RefreshHud();
             ValuesChanged?.Invoke();
+        }
+
+        if (health <= 0f && !endingTriggered)
+        {
+            TriggerEndingScreen();
+            return;
         }
 
         cameraCheckTimer -= deltaTime;
@@ -124,7 +157,7 @@ public sealed class PlayerNeedsManager : MonoBehaviour
 
     private void UpdateSceneVisibility(Scene scene)
     {
-        bool shouldHide = scene.name == MainMenuSceneName || scene.name == LaptopSceneName;
+        bool shouldHide = IsHudHiddenScene(scene.name);
 
         if (needsCanvas != null)
         {
@@ -136,7 +169,7 @@ public sealed class PlayerNeedsManager : MonoBehaviour
     {
         string activeSceneName = SceneManager.GetActiveScene().name;
 
-        if (activeSceneName == MainMenuSceneName || activeSceneName == LaptopSceneName)
+        if (IsHudHiddenScene(activeSceneName))
         {
             return;
         }
@@ -185,14 +218,15 @@ public sealed class PlayerNeedsManager : MonoBehaviour
         panelRect.anchorMax = new Vector2(1f, 0f);
         panelRect.pivot = new Vector2(1f, 0f);
         panelRect.anchoredPosition = new Vector2(-24f, 24f);
-        panelRect.sizeDelta = new Vector2(430f, 150f);
+        panelRect.sizeDelta = new Vector2(430f, 196f);
 
-        needValues = new Text[3];
-        needBarFills = new Image[3];
+        needValues = new Text[NeedCount];
+        needBarFills = new Image[NeedCount];
 
         CreateNeedRow(panel.transform, 0, "Hungry", new Color(1f, 0.62f, 0.25f, 1f));
         CreateNeedRow(panel.transform, 1, "Thirsty", new Color(0.32f, 0.82f, 1f, 1f));
         CreateNeedRow(panel.transform, 2, "Drunk", new Color(0.82f, 0.48f, 1f, 1f));
+        CreateNeedRow(panel.transform, 3, "Health", new Color(1f, 0.26f, 0.25f, 1f));
 
         RefreshHud();
     }
@@ -256,6 +290,7 @@ public sealed class PlayerNeedsManager : MonoBehaviour
         SetNeedValue(0, hunger);
         SetNeedValue(1, thirst);
         SetNeedValue(2, drunk);
+        SetNeedValue(3, health);
     }
 
     private void SetNeedValue(int index, float value)
@@ -265,7 +300,7 @@ public sealed class PlayerNeedsManager : MonoBehaviour
             return;
         }
 
-        float normalizedValue = Mathf.Clamp01(value / 100f);
+        float normalizedValue = Mathf.Clamp01(value / MaxNeedValue);
 
         if (needBarFills[index] != null)
         {
@@ -309,5 +344,41 @@ public sealed class PlayerNeedsManager : MonoBehaviour
         rectTransform.anchorMax = Vector2.one;
         rectTransform.offsetMin = offsetMin;
         rectTransform.offsetMax = offsetMax;
+    }
+
+    private void UpdateHealth(float deltaTime)
+    {
+        float hungerDanger = Mathf.InverseLerp(healthDangerThreshold, 0f, hunger);
+        float thirstDanger = Mathf.InverseLerp(healthDangerThreshold, 0f, thirst);
+        float healthDrain = hungerDanger * hungerHealthDrainPerSecond + thirstDanger * thirstHealthDrainPerSecond;
+
+        if (healthDrain > 0f)
+        {
+            health = Mathf.MoveTowards(health, 0f, healthDrain * deltaTime);
+            return;
+        }
+
+        if (hunger >= healthRecoveryThreshold && thirst >= healthRecoveryThreshold)
+        {
+            health = Mathf.MoveTowards(health, MaxNeedValue, healthRecoveryPerSecond * deltaTime);
+        }
+    }
+
+    private void TriggerEndingScreen()
+    {
+        endingTriggered = true;
+
+        if (Application.CanStreamedLevelBeLoaded(EndingScreenSceneName))
+        {
+            SceneFadeTransition.LoadScene(EndingScreenSceneName, 0.35f, 0.45f, Color.black);
+            return;
+        }
+
+        SceneManager.LoadScene(EndingScreenSceneName);
+    }
+
+    private static bool IsHudHiddenScene(string sceneName)
+    {
+        return sceneName == MainMenuSceneName || sceneName == LaptopSceneName || sceneName == EndingScreenSceneName;
     }
 }

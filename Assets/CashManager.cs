@@ -8,6 +8,7 @@ public sealed class CashManager : MonoBehaviour
     private const string PrefabPath = "Prefabs/CashManager";
     private const string MainMenuSceneName = "MainMenu";
     private const string LaptopSceneName = "LaptopScene";
+    private const string EndingScreenSceneName = "EndingScreen";
 
     public static CashManager Instance { get; private set; }
 
@@ -65,6 +66,11 @@ public sealed class CashManager : MonoBehaviour
         SetCash(currentCash + amount);
     }
 
+    public void ResetForNewGame()
+    {
+        SetCash(startingAmount);
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -100,7 +106,7 @@ public sealed class CashManager : MonoBehaviour
     {
         if (cashCanvas != null)
         {
-            cashCanvas.gameObject.SetActive(scene.name != MainMenuSceneName && scene.name != LaptopSceneName);
+            cashCanvas.gameObject.SetActive(scene.name != MainMenuSceneName && scene.name != LaptopSceneName && scene.name != EndingScreenSceneName);
         }
     }
 

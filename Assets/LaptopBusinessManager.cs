@@ -271,6 +271,12 @@ public sealed class LaptopBusinessManager : MonoBehaviour
         return true;
     }
 
+    public void ResetForNewGame()
+    {
+        InitializeBusinessState();
+        StateChanged?.Invoke();
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -281,9 +287,22 @@ public sealed class LaptopBusinessManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        InitializeBusinessState();
+    }
+
+    private void InitializeBusinessState()
+    {
         realEstateInvestments = CreateRealEstateInvestments();
         stocks = CreateStocks();
         angelInvestmentCatalog = CreateAngelInvestmentCatalog();
+        angelInvestmentRecords.Clear();
+        incomeTimer = IncomeInterval;
+        stockTimer = 0f;
+        angelTimer = 0f;
+        angelRefreshTimer = AngelOpportunityRefreshInterval;
+        nextAngelOpportunityIndex = 0;
+        angelOpportunityVersion++;
+        nextAngelInvestmentRecordId = 1;
         angelInvestments = CreateInitialAngelInvestments();
     }
 
