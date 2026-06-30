@@ -223,10 +223,30 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: -7823293702887809713, guid: f361fb2efcee04b4da511025f34a4209, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 9be1fa0d85dde406699174f2e2f00a28, type: 2}
+    - target: {fileID: -6138923895777843317, guid: f361fb2efcee04b4da511025f34a4209, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 22aab97dc4241410dbed8c696a4dac14, type: 2}
     - target: {fileID: 919132149155446097, guid: f361fb2efcee04b4da511025f34a4209, type: 3}
       propertyPath: m_Name
       value: AnimCharacter
       objectReference: {fileID: 0}
+    - target: {fileID: 1630794972795428178, guid: f361fb2efcee04b4da511025f34a4209, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 946fc48ecc3474105b5743aee293c7d0, type: 2}
+    - target: {fileID: 4123177642777943866, guid: f361fb2efcee04b4da511025f34a4209, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 6319e879fd59d4bae805f31a6d6d2778, type: 2}
+    - target: {fileID: 5128063986421979777, guid: f361fb2efcee04b4da511025f34a4209, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 645c28aacfdbf4ba49e0a4fdac81cdbd, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
