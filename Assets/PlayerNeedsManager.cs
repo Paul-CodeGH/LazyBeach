@@ -7,6 +7,7 @@ public sealed class PlayerNeedsManager : MonoBehaviour
 {
     private const string PrefabPath = "Prefabs/PlayerNeedsManager";
     private const string MainMenuSceneName = "MainMenu";
+    private const string LaptopSceneName = "LaptopScene";
 
     public static PlayerNeedsManager Instance { get; private set; }
 
@@ -81,7 +82,9 @@ public sealed class PlayerNeedsManager : MonoBehaviour
 
     private void Update()
     {
-        if (SceneManager.GetActiveScene().name == MainMenuSceneName)
+        string activeSceneName = SceneManager.GetActiveScene().name;
+
+        if (activeSceneName == MainMenuSceneName || activeSceneName == LaptopSceneName)
         {
             return;
         }
@@ -120,17 +123,19 @@ public sealed class PlayerNeedsManager : MonoBehaviour
 
     private void UpdateSceneVisibility(Scene scene)
     {
-        bool isMainMenu = scene.name == MainMenuSceneName;
+        bool shouldHide = scene.name == MainMenuSceneName || scene.name == LaptopSceneName;
 
         if (needsCanvas != null)
         {
-            needsCanvas.gameObject.SetActive(!isMainMenu);
+            needsCanvas.gameObject.SetActive(!shouldHide);
         }
     }
 
     private void AttachDrunkEffects()
     {
-        if (SceneManager.GetActiveScene().name == MainMenuSceneName)
+        string activeSceneName = SceneManager.GetActiveScene().name;
+
+        if (activeSceneName == MainMenuSceneName || activeSceneName == LaptopSceneName)
         {
             return;
         }

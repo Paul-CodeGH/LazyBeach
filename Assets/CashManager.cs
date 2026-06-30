@@ -6,12 +6,12 @@ using UnityEngine.UI;
 public sealed class CashManager : MonoBehaviour
 {
     private const string PrefabPath = "Prefabs/CashManager";
+    private const string MainMenuSceneName = "MainMenu";
+    private const string LaptopSceneName = "LaptopScene";
 
     public static CashManager Instance { get; private set; }
 
     [SerializeField] private int startingAmount = 500;
-
-    private const string MainMenuSceneName = "MainMenu";
 
     private Canvas cashCanvas;
     private Text cashText;
@@ -100,7 +100,7 @@ public sealed class CashManager : MonoBehaviour
     {
         if (cashCanvas != null)
         {
-            cashCanvas.gameObject.SetActive(scene.name != MainMenuSceneName);
+            cashCanvas.gameObject.SetActive(scene.name != MainMenuSceneName && scene.name != LaptopSceneName);
         }
     }
 
