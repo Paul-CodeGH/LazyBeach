@@ -62,11 +62,13 @@ public sealed class EndingScreenController : MonoBehaviour
         PlayerNeedsManager.EnsureExists();
         LaptopBusinessManager.EnsureExists();
         TimeOfDayManager.EnsureExists();
+        WeatherManager.EnsureExists();
 
         CashManager.Instance?.ResetForNewGame();
         PlayerNeedsManager.Instance?.ResetForNewGame();
         LaptopBusinessManager.Instance?.ResetForNewGame();
         TimeOfDayManager.Instance?.ResetForNewGame();
+        WeatherManager.Instance?.ResetForNewGame();
     }
 
     private void CreateInterface()

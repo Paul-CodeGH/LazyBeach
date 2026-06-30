@@ -7,5 +7,6 @@ public static class GameBootstrap
         PlayerNeedsManager.EnsureExists();
         LaptopBusinessManager.EnsureExists();
         TimeOfDayManager.EnsureExists();
+        WeatherManager.EnsureExists();
     }
 }
