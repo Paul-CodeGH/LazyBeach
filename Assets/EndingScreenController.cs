@@ -98,18 +98,18 @@ public sealed class EndingScreenController : MonoBehaviour
         messageRect.offsetMax = Vector2.zero;
 
         RectTransform buttons = CreateRect("Buttons", canvas.transform);
-        buttons.anchorMin = new Vector2(0.5f, 0.21f);
-        buttons.anchorMax = new Vector2(0.5f, 0.42f);
+        buttons.anchorMin = new Vector2(0.5f, 0.17f);
+        buttons.anchorMax = new Vector2(0.5f, 0.17f);
         buttons.pivot = new Vector2(0.5f, 0.5f);
-        buttons.sizeDelta = new Vector2(360f, 240f);
+        buttons.sizeDelta = new Vector2(330f, 284f);
 
         VerticalLayoutGroup layout = buttons.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.spacing = 18f;
+        layout.spacing = 20f;
         layout.childAlignment = TextAnchor.MiddleCenter;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = true;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
 
         Button restartButton = CreateButton("Restart", buttons);
         restartButton.onClick.AddListener(Restart);
@@ -133,8 +133,11 @@ public sealed class EndingScreenController : MonoBehaviour
         button.targetGraphic = image;
         button.transition = Selectable.Transition.None;
 
-        Text text = CreateText(label, buttonObject.transform, 26, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(1f, 0.89f, 0.48f, 1f));
-        SetStretch(text.rectTransform, Vector2.zero, Vector2.zero);
+        RectTransform buttonRect = button.GetComponent<RectTransform>();
+        buttonRect.sizeDelta = new Vector2(330f, 84f);
+
+        Text text = CreateText(label, buttonObject.transform, 30, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(1f, 0.89f, 0.48f, 1f));
+        SetStretch(text.rectTransform, new Vector2(12f, 5f), new Vector2(-12f, -5f));
 
         MainMenuButtonFeedback feedback = buttonObject.AddComponent<MainMenuButtonFeedback>();
         feedback.Initialize(image);
